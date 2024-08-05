@@ -1,3 +1,5 @@
+import re
+
 text_type_text = "text"
 text_type_bold = "bold"
 text_type_italic = "italic"
@@ -27,3 +29,19 @@ class TextNode:
 
     def __repr__(self):
         return f"TextNode({self.text}, {self.text_type}, {self.url})"
+    
+
+def extract_markdown_images(text):
+    matches_images = re.findall(r"!\[(.*?)\]\((.*?)\)")
+    result = []
+    for match in matches_images:
+        result.append((match[0], match[1]))
+    return result
+
+
+def extract_markdown_links(text):
+    matches_links = re.findall(r"\[(.*?)\]\((.*?)\)")
+    result = []
+    for match in matches_links:
+        result.append((match[0],match[1]))
+    return result
