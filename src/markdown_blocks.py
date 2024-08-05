@@ -1,3 +1,8 @@
+import os
+
+from htmlnode import ParentNode, text_node_to_html_node
+from inline_markdown import text_to_textnodes
+
 block_type_paragraph = "paragraph"
 block_type_heading = "heading"
 block_type_code = "code"
@@ -49,7 +54,7 @@ def markdown_to_html_node(markdown):
     for block in blocks:
         html_node = block_to_html_node(block)
         children.append(html_node)
-    return ParentNode("div", children, None)
+    return ParentNode("div", children)
 
 
 def block_to_html_node(block):
@@ -144,3 +149,36 @@ def markdown_to_blocks(markdown):
     blocks = markdown.split("\n\n")
     cleaned_blocks = [block.strip() for block in blocks if block.strip()]
     return cleaned_blocks
+
+def extract_title(markdown):
+    lines = markdown.split("\n")
+    for line in lines:
+        if line.startswith("# "):
+            return line[2:].strip()
+    raise Exception("No H1 header found in the markdown.")
+
+def generate_page(from_path, template_path, dest_path):
+    print(f"Generating page from {from_path} to {dest_path} using {template_path}")
+
+    if not os.path.exists(template_path):
+        print(f"Error: Template file does not exist at '{template_path}'")
+        return
+
+    with open(from_path, 'r') as f:
+        markdown_content = f.read()
+
+    with open(template_path, 'r') as f:
+        template_content = f.read()
+
+    dest_directory = os.path.dirname(dest_path)
+    if not os.path.exists(dest_directory):
+        os.makedirs(dest_directory)
+
+    html_content = markdown_to_html_node(markdown_content).to_html()
+    title = extract_title(markdown_content)
+
+    full_html = template_content.replace('{{ Title }}', title).replace('{{ Content }}', html_content)
+
+    with open(dest_path, 'w') as f:
+        f.write(full_html)
+

@@ -3,21 +3,21 @@ from textnode import TextNode
 def text_node_to_html_node(text_node):
     valid_types = ["text", "bold", "italic", "code", "link", "image"]
 
-    if text_node.type not in valid valid_types:
-        raise ValueError(f"Invalid TextNode type: {text_node.type}")
+    if text_node.text_type not in valid_types:
+        raise ValueError(f"Invalid TextNode type: {text_node.text_type}")
 
-    if text_node.type == "text":
+    if text_node.text_type == "text":
         return LeafNode(tag="", value=text_node.value)
-    elif text_node.type == "bold":
+    elif text_node.text_type == "bold":
         return LeafNode(tag="b", value=text_node.value)
-    elif text_node.type == "italic":
+    elif text_node.text_type == "italic":
         return LeafNode(tag="i", value=text_node.value)
-    elif text_node.type == "code":
+    elif text_node.text_type == "code":
         return LeafNode(tag="code", value=text_node.value)
-    elif text_node.type == "link":
-        return LeafNode(tag="a", value=text_node.value, href=text_node.href)
-    elif text_node.type == "image":
-        return LeafNode(tag="img", value="", src=text_node.src, alt=text_node.alt)
+    elif text_node.text_type == "link":
+        return LeafNode(tag="a", value=text_node.value, props={'href': text_node.href})
+    elif text_node.text_type == "image":
+        return LeafNode(tag="img", value="", props={'src': text_node.src, 'alt': text_node.alt})
 
 
 class HTMLNode:
@@ -25,10 +25,10 @@ class HTMLNode:
         self.tag = tag
         self.value = value
         self.children = children if children is not None else []
-        self.props = props if props is not None else{}
+        self.props = props if props is not None else {}
 
     def to_html(self):
-        raise NotImplementatedError("This method should be overriden by subclasses")
+        raise NotImplementedError("This method should be overridden by subclasses")
     
     def props_to_html(self):
         props_str = ""
@@ -37,28 +37,23 @@ class HTMLNode:
         return props_str
 
     def __repr__(self):
-        return f"HTMNode(tag={self.tag}, value{self.value}, children={self.children}, props{self.props})"
+        return f"HTMLNode(tag={self.tag}, value={self.value}, children={self.children}, props={self.props})"
 
-    class LeafNode(HTMLNode):
-        def __init__(self, tag, value, attributes=None):
-            super(self).__init__(tag, attributes)
-            self.value = value
-            if self.value is None:
-                raise ValueError("LeafNode must have a value")
+class LeafNode(HTMLNode):
+    def __init__(self, tag, value, props=None):
+        super().__init__(tag, value=value, props=props)
 
-    class ParentNode(HTMLNode):
-        def __init__(self, tag, children):
-            self.tag = tag
-            self.children = children
-            if self.tag is None:
-                raise ValueError("ParentNode must have a tag")
-            if not self.children:
-                raise ValueError("ParentNode must have children")
-        def to_html(self):
-            opening_tag = f"<{self.tag}>"
+    def to_html(self):
+        opening_tag = f"<{self.tag}{self.props_to_html()}>"
+        closing_tag = f"</{self.tag}>"
+        return opening_tag + self.value + closing_tag
 
-            children_html = ''.Join(child.to_html() for child in self.children)
+class ParentNode(HTMLNode):
+    def __init__(self, tag, children, props=None):
+        super().__init__(tag, children=children, props=props)
 
-            closing_tag = f"<{self.tag}>"
-
-            return opening_tag + children_html + closing_tag
+    def to_html(self):
+        opening_tag = f"<{self.tag}{self.props_to_html()}>"
+        children_html = ''.join(child.to_html() for child in self.children)
+        closing_tag = f"</{self.tag}>"
+        return opening_tag + children_html + closing_tag
