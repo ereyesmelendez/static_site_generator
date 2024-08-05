@@ -1,7 +1,6 @@
-import os
-
-from htmlnode import ParentNode, text_node_to_html_node, LeafNode
+from htmlnode import ParentNode
 from inline_markdown import text_to_textnodes
+from textnode import text_node_to_html_node
 
 block_type_paragraph = "paragraph"
 block_type_heading = "heading"
@@ -9,6 +8,18 @@ block_type_code = "code"
 block_type_quote = "quote"
 block_type_olist = "ordered_list"
 block_type_ulist = "unordered_list"
+
+
+def markdown_to_blocks(markdown):
+    blocks = markdown.split("\n\n")
+    filtered_blocks = []
+    for block in blocks:
+        if block == "":
+            continue
+        block = block.strip()
+        filtered_blocks.append(block)
+    return filtered_blocks
+
 
 def block_to_block_type(block):
     lines = block.split("\n")
@@ -48,32 +59,32 @@ def block_to_block_type(block):
         return block_type_olist
     return block_type_paragraph
 
-def markdown_to_html_node(markdown):
-    blocks = markdown_to_blocks(markdown) 
-    children = [block_to_html_node(block) for block in blocks]
-    return ParentNode("div", children)
 
-markdown_content = "# Tolkien Fan Club\nSome more content\n* item1\n* item2"
-html_node = markdown_to_html_node(markdown_content)
-print(html_node.to_html())
+def markdown_to_html_node(markdown):
+    blocks = markdown_to_blocks(markdown)
+    children = []
+    for block in blocks:
+        html_node = block_to_html_node(block)
+        children.append(html_node)
+    return ParentNode("div", children, None)
 
 
 def block_to_html_node(block):
-    if block.startswith("# "):
-        return LeafNode("h1", block[2:].strip())
-    elif block.startswith("## "):
-        return LeafNode("h2", block[3:].strip())
-    elif block.startswith("* "):
-        items = block.split('\n* ')[1:]
-        return ParentNode("ul", [LeafNode("li", item) for item in items])
-    elif block.startswith("> "):
-        return LeafNode("blockquote", block[2:].strip())
-    else:
-        return LeafNode("p", block.strip())
+    block_type = block_to_block_type(block)
+    if block_type == block_type_paragraph:
+        return paragraph_to_html_node(block)
+    if block_type == block_type_heading:
+        return heading_to_html_node(block)
+    if block_type == block_type_code:
+        return code_to_html_node(block)
+    if block_type == block_type_olist:
+        return olist_to_html_node(block)
+    if block_type == block_type_ulist:
+        return ulist_to_html_node(block)
+    if block_type == block_type_quote:
+        return quote_to_html_node(block)
+    raise ValueError("Invalid block type")
 
-markdown_content = "# Tolkien Fan Club\nSome more content\n* item1\n* item2"
-html_node = markdown_to_html_node(markdown_content)
-print(html_node.to_html())
 
 def text_to_children(text):
     text_nodes = text_to_textnodes(text)
@@ -144,40 +155,4 @@ def quote_to_html_node(block):
     content = " ".join(new_lines)
     children = text_to_children(content)
     return ParentNode("blockquote", children)
-    
-
-
-def markdown_to_blocks(markdown):
-    return markdown.split('\n\n')  # Simple split by double newline
-
-def extract_title(markdown):
-    for line in markdown.split('\n'):
-        if line.startswith('# '):
-            return line[2:].strip()
-    raise ValueError("No H1 title found")
-
-def generate_page(from_path, template_path, dest_path):
-    print(f"Generating page from {from_path} to {dest_path} using {template_path}")
-
-    if not os.path.exists(template_path):
-        print(f"Error: Template file does not exist at '{template_path}'")
-        return
-
-    with open(from_path, 'r') as f:
-        markdown_content = f.read()
-
-    with open(template_path, 'r') as f:
-        template_content = f.read()
-
-    dest_directory = os.path.dirname(dest_path)
-    if not os.path.exists(dest_directory):
-        os.makedirs(dest_directory)
-
-    html_content = markdown_to_html_node(markdown_content).to_html()
-    title = extract_title(markdown_content)
-
-    full_html = template_content.replace('{{ Title }}', title).replace('{{ Content }}', html_content)
-
-    with open(dest_path, 'w') as f:
-        f.write(full_html)
 
