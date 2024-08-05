@@ -1,6 +1,6 @@
 import os
 
-from htmlnode import ParentNode, text_node_to_html_node
+from htmlnode import ParentNode, text_node_to_html_node, LeafNode
 from inline_markdown import text_to_textnodes
 
 block_type_paragraph = "paragraph"
@@ -49,29 +49,31 @@ def block_to_block_type(block):
     return block_type_paragraph
 
 def markdown_to_html_node(markdown):
-    blocks = markdown_to_blocks(markdown)
-    children = []
-    for block in blocks:
-        html_node = block_to_html_node(block)
-        children.append(html_node)
+    blocks = markdown_to_blocks(markdown) 
+    children = [block_to_html_node(block) for block in blocks]
     return ParentNode("div", children)
+
+markdown_content = "# Tolkien Fan Club\nSome more content\n* item1\n* item2"
+html_node = markdown_to_html_node(markdown_content)
+print(html_node.to_html())
 
 
 def block_to_html_node(block):
-    block_type = block_to_block_type(block)
-    if block_type == block_type_paragraph:
-        return paragraph_to_html_node(block)
-    if block_type == block_type_heading:
-        return heading_to_html_node(block)
-    if block_type == block_type_code:
-        return code_to_html_node(block)
-    if block_type == block_type_olist:
-        return olist_to_html_node(block)
-    if block_type == block_type_ulist:
-        return ulist_to_html_node(block)
-    if block_type == block_type_quote:
-        return quote_to_html_node(block)
-    raise ValueError("Invalid block type")
+    if block.startswith("# "):
+        return LeafNode("h1", block[2:].strip())
+    elif block.startswith("## "):
+        return LeafNode("h2", block[3:].strip())
+    elif block.startswith("* "):
+        items = block.split('\n* ')[1:]
+        return ParentNode("ul", [LeafNode("li", item) for item in items])
+    elif block.startswith("> "):
+        return LeafNode("blockquote", block[2:].strip())
+    else:
+        return LeafNode("p", block.strip())
+
+markdown_content = "# Tolkien Fan Club\nSome more content\n* item1\n* item2"
+html_node = markdown_to_html_node(markdown_content)
+print(html_node.to_html())
 
 def text_to_children(text):
     text_nodes = text_to_textnodes(text)
@@ -146,16 +148,13 @@ def quote_to_html_node(block):
 
 
 def markdown_to_blocks(markdown):
-    blocks = markdown.split("\n\n")
-    cleaned_blocks = [block.strip() for block in blocks if block.strip()]
-    return cleaned_blocks
+    return markdown.split('\n\n')  # Simple split by double newline
 
 def extract_title(markdown):
-    lines = markdown.split("\n")
-    for line in lines:
-        if line.startswith("# "):
+    for line in markdown.split('\n'):
+        if line.startswith('# '):
             return line[2:].strip()
-    raise Exception("No H1 header found in the markdown.")
+    raise ValueError("No H1 title found")
 
 def generate_page(from_path, template_path, dest_path):
     print(f"Generating page from {from_path} to {dest_path} using {template_path}")
